@@ -1,0 +1,14 @@
+node_modules
+*.iml
+*.log
+js/*.ts
+js/*.js
+js/*.map
+.idea
+typings
+*.log.*
+feather
+feather2
+package-lock.json
+dist
+.cache
