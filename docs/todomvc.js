@@ -1013,7 +1013,7 @@ var todomvc = (function (exports) {
 	 * visible elements. Dispatch code in connectTemplate method.
 	 */
 	var UPDATE_KEY = '__update__';
-	var Update = function () { return new CustomEvent(UPDATE_KEY, { bubbles: true, cancelable: false }); };
+	var Update = function () { return new CustomEvent(UPDATE_KEY, { bubbles: true, cancelable: false, scoped: false }); };
 	var updateDomValue = function (node, info, value, oldValue) {
 	    if (info.type === template_1$1.TemplateTokenType.TEXT) {
 	        node.textContent = functions_1$1.isDef(value) ? value : '';
@@ -1125,12 +1125,12 @@ var todomvc = (function (exports) {
 	    }
 	    return map;
 	};
-	var bindArray = function (array, node, widget, info, templateName, changeHappened) {
+	var bindArray = function (array, parentNode, widget, info, templateName, changeHappened) {
 	    var method = info.arrayTransformer(), transformer = (widget[method] || transformer_1$1.TransformerRegistry[method]).bind(widget);
-	    var listener = arrays_1$1.domArrayListener(array, node, transformer(), changeHappened, function (item) {
+	    var listener = arrays_1$1.domArrayListener(array, parentNode, transformer(), changeHappened, function (item) {
 	        var template = template_1$1.getTemplate(item, templateName()), node = template.nodes[1];
 	        construct_1$1.runConstructorQueue(item, node);
-	        exports.connectTemplate(item, node, template, node);
+	        exports.connectTemplate(item, node, template, parentNode);
 	        return node;
 	    });
 	    arrays_1$1.observeArray(array, listener);
@@ -1576,6 +1576,11 @@ var todomvc = (function (exports) {
 	        this.state = ListState.ALL;
 	        this.todos = [];
 	        this.init = function (el) { return bind_2(_this, el); };
+	        this.listFilter = function () {
+	            return function (todo) { return _this.state === ListState.ALL ||
+	                (_this.state === ListState.COMPLETED && todo.completed) ||
+	                (_this.state === ListState.ACTIVE && !todo.completed); };
+	        };
 	        this.stateAll = function (s) { return _this.selectedState(s, ListState.ALL); };
 	        this.stateActive = function (s) { return _this.selectedState(s, ListState.ACTIVE); };
 	        this.stateCompleted = function (s) { return _this.selectedState(s, ListState.COMPLETED); };
@@ -1592,12 +1597,6 @@ var todomvc = (function (exports) {
 	    };
 	    TodoList.prototype.deleteTodo = function (todo) {
 	        arrays_1(this.todos, [todo]);
-	    };
-	    TodoList.prototype.listFilter = function () {
-	        var _this = this;
-	        return (function (todo) { return _this.state === ListState.ALL ||
-	            (_this.state === ListState.COMPLETED && todo.completed) ||
-	            (_this.state === ListState.ACTIVE && !todo.completed); });
 	    };
 	    TodoList.prototype.locationPath = function (params) {
 	        if (params.path === 'active') {

@@ -32,12 +32,10 @@ export class TodoList implements Widget {
         removeFromArray(this.todos, [todo])
     }
 
-    listFilter() {
-        return (
-            (todo: Todo) => this.state === ListState.ALL ||
-            (this.state === ListState.COMPLETED && todo.completed) ||
-            (this.state === ListState.ACTIVE && !todo.completed))
-    }
+    listFilter = () =>
+        (todo: Todo) => this.state === ListState.ALL ||
+        (this.state === ListState.COMPLETED && todo.completed) ||
+        (this.state === ListState.ACTIVE && !todo.completed)
 
     @Route('/:path')
     locationPath(params: RouteParam) {

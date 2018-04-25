@@ -12,3 +12,4 @@ feather2
 package-lock.json
 dist
 .cache
+.rpt2_cache
