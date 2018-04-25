@@ -3,18 +3,22 @@
   "main": "./lib/feather.min.js",
   "types": "./lib/feather.d.ts",
   "dependencies": {
-    "@feather-ts/feather-ts": "2.0.24",
+    "@feather-ts/feather-ts": "2.0.51",
     "todomvc-app-css": "2.1.0",
     "todomvc-common": "1.0.3"
   },
   "devDependencies": {
-    "parcel-bundler": "1.7.1",
+    "rollup-plugin-commonjs": "^9.1.0",
+    "rollup-plugin-node-resolve": "^3.3.0",
+    "rollup-plugin-postcss": "^1.6.1",
+    "rollup-plugin-typescript2": "^0.13.0",
     "stylelint": "9.2.0",
     "ts-node": "3.3.0",
     "tslint": "5.7.0",
     "typescript": "2.5.2"
   },
   "scripts": {
-    "start": "parcel serve src/html/index.html"
+    "start": "parcel serve src/html/index.html",
+    "bundle": "rollup -c"
   }
 }

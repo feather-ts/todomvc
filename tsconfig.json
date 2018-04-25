@@ -12,9 +12,6 @@
         "lib": [
             "dom",
             "esnext"
-        ],
-        "types": [
-            "feather-ts"
         ]
     },
     "exclude": [
