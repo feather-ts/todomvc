@@ -825,7 +825,7 @@ var todomvc = (function (exports) {
 	        listeners.push(listener);
 	    }
 	};
-	function domArrayListener(arr, el, filter, changeHappened, onItemAdded) {
+	function domArrayListener(arr, el, filter, onItemAdded) {
 	    var firstChild = el.firstElementChild; // usually null, lists that share a parent with other nodes are prepended.
 	    var nodeVisible = [];
 	    var elementMap = new WeakMap();
@@ -839,7 +839,6 @@ var todomvc = (function (exports) {
 	                copy[i] = nodeVisible[indices[i]];
 	            }
 	            nodeVisible = copy;
-	            changeHappened();
 	        },
 	        splice: function (index, deleteCount, added, deleted) {
 	            if (deleted === void 0) { deleted = []; }
@@ -865,21 +864,16 @@ var todomvc = (function (exports) {
 	                }
 	            }
 	            patch.splice.apply(patch, [index, deleteCount].concat(added.map(function () { return true; })));
-	            var change = false;
 	            for (var i = 0, n = arr.length; i < n; i++) {
 	                patch[i] = filter(arr[i], i);
+	                var itemNode = elementMap.get(arr[i]);
 	                if (patch[i] && !nodeVisible[i]) {
 	                    var nextVisible = nodeVisible.indexOf(true, i), refNode = ~nextVisible ? elementMap.get(arr[nextVisible]) : firstChild;
-	                    el.insertBefore(elementMap.get(arr[i]), refNode);
-	                    change = true;
+	                    el.insertBefore(itemNode, refNode);
 	                }
-	                else if (!patch[i] && nodeVisible[i]) {
-	                    el.removeChild(elementMap.get(arr[i]));
-	                    change = true;
+	                else if (!patch[i] && nodeVisible[i] && itemNode.parentNode === el) {
+	                    el.removeChild(itemNode);
 	                }
-	            }
-	            if (deleteCount || added.length || change) {
-	                changeHappened();
 	            }
 	            nodeVisible = patch;
 	        }
@@ -1046,7 +1040,8 @@ var todomvc = (function (exports) {
 	            continue;
 	        }
 	        var oldValue = oldValueMap[i], value = valueMap[i];
-	        if (info.type === template_1$1.TemplateTokenType.PROPERTY && (Array.isArray(value) || value instanceof FilteredArray)) { // ignore arrays
+	        if (value === ARRAY_TAG) { // ignore arrays
+	            widget[info.path()].splice(0, 0);
 	            continue;
 	        }
 	        if (oldValue !== value) {
@@ -1106,11 +1101,12 @@ var todomvc = (function (exports) {
 	    }
 	    return FilteredArray;
 	}()); // flag class for update check
+	var ARRAY_TAG = new FilteredArray();
 	var getInfoValue = function (widget, info, transformMap) {
 	    var path = info.path(), transformer = transformMap[info.curly()];
 	    var v = objects_1$1.deepValue(widget, path);
 	    if (Array.isArray(v) && functions_1$1.isFunction(transformer(v))) {
-	        return new FilteredArray();
+	        return ARRAY_TAG;
 	    }
 	    else {
 	        v = functions_1$1.isFunction(v) ? v.call(widget) : v;
@@ -1125,9 +1121,9 @@ var todomvc = (function (exports) {
 	    }
 	    return map;
 	};
-	var bindArray = function (array, parentNode, widget, info, templateName, changeHappened) {
+	var bindArray = function (array, parentNode, widget, info, templateName) {
 	    var method = info.arrayTransformer(), transformer = (widget[method] || transformer_1$1.TransformerRegistry[method]).bind(widget);
-	    var listener = arrays_1$1.domArrayListener(array, parentNode, transformer(), changeHappened, function (item) {
+	    var listener = arrays_1$1.domArrayListener(array, parentNode, transformer(), function (item) {
 	        var template = template_1$1.getTemplate(item, templateName()), node = template.nodes[1];
 	        construct_1$1.runConstructorQueue(item, node);
 	        exports.connectTemplate(item, node, template, parentNode);
@@ -1168,7 +1164,7 @@ var todomvc = (function (exports) {
 	    }
 	    node.removeAttribute('template');
 	};
-	var bindTemplateInfos = function (template, widget, updateTemplate, transformMap, arrayListeners) {
+	var bindTemplateInfos = function (template, widget, updateTemplate, transformMap) {
 	    var bound = [];
 	    var infos = template.infos;
 	    var _loop_2 = function (info, i, n) {
@@ -1194,7 +1190,7 @@ var todomvc = (function (exports) {
 	                else {
 	                    templateName = function () { return attributeValue_1; };
 	                }
-	                arrayListeners.push(bindArray(value, node, widget, info, templateName, function () { return updateTemplate(false); }));
+	                bindArray(value, node, widget, info, templateName);
 	                node.removeAttribute('template');
 	            }
 	        }
@@ -1220,22 +1216,17 @@ var todomvc = (function (exports) {
 	    }
 	};
 	exports.connectTemplate = function (widget, el, template, parentNode) {
-	    var transformMap = getTransformMap(widget, template), arrayListeners = [];
+	    if (parentNode === void 0) { parentNode = el.parentNode; }
+	    var transformMap = getTransformMap(widget, template);
 	    var res = updateDom(widget, template, transformMap, []);
-	    var updateTemplate = function (array) {
-	        if (array === void 0) { array = true; }
+	    var updateTemplate = function () {
 	        res = updateDom(widget, template, transformMap, res.valueMap);
 	        if (res.change) {
 	            parentNode.dispatchEvent(Update()); // let's inform parent widgets
 	        }
-	        if (array) {
-	            for (var i = 0, n = arrayListeners.length; i < n; i++) {
-	                arrayListeners[i].splice(0, 0, [], []);
-	            }
-	        }
 	    };
 	    el.addEventListener(UPDATE_KEY, function () { return functions_1$1.throttle(updateTemplate, 80); });
-	    bindTemplateInfos(template, widget, updateTemplate, transformMap, arrayListeners);
+	    bindTemplateInfos(template, widget, updateTemplate, transformMap);
 	    template_node_1.injectTemplateNodes(widget, template.nodes);
 	};
 	var transformFactory = function (widget, transformers) {
@@ -1257,7 +1248,7 @@ var todomvc = (function (exports) {
 	    }
 	    el.innerHTML = '';
 	    var template = template_1$1.getTemplate(widget, name);
-	    exports.connectTemplate(widget, el, template, el.parentNode);
+	    exports.connectTemplate(widget, el, template);
 	    el.appendChild(template.doc);
 	};
 	exports.findWidgets = function (widget, type) {
