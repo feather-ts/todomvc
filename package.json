@@ -3,7 +3,7 @@
   "main": "./lib/feather.min.js",
   "types": "./lib/feather.d.ts",
   "dependencies": {
-    "@feather-ts/feather-ts": "^2.0.56",
+    "@feather-ts/feather-ts": "^2.0.57",
     "todomvc-app-css": "2.1.0",
     "todomvc-common": "1.0.3"
   },

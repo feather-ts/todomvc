@@ -395,23 +395,6 @@ var todomvc = (function (exports) {
 	exports.isFunction = function (functionToCheck) {
 	    return functionToCheck && getType.call(functionToCheck) === '[object Function]';
 	};
-	var lastCall = new WeakMap();
-	var throttles = new WeakMap();
-	exports.throttle = function (func, time) {
-	    var now = +new Date();
-	    var lastCallTime = (lastCall.get(func) || 0);
-	    if (now - time >= lastCallTime) {
-	        func();
-	        lastCall.set(func, now);
-	    }
-	    else {
-	        clearTimeout(throttles.get(func));
-	        throttles.set(func, setTimeout(function () {
-	            lastCall.set(func, now);
-	            func();
-	        }));
-	    }
-	};
 	exports.isDef = function (x) { return typeof x !== 'undefined'; };
 	exports.isUndef = function (x) { return !exports.isDef(x); };
 
@@ -420,18 +403,16 @@ var todomvc = (function (exports) {
 	var functions$1 = unwrapExports(functions);
 	var functions_1 = functions.compose;
 	var functions_2 = functions.isFunction;
-	var functions_3 = functions.throttle;
-	var functions_4 = functions.isDef;
-	var functions_5 = functions.isUndef;
+	var functions_3 = functions.isDef;
+	var functions_4 = functions.isUndef;
 
 	var functions$2 = /*#__PURE__*/Object.freeze({
 		default: functions$1,
 		__moduleExports: functions,
 		compose: functions_1,
 		isFunction: functions_2,
-		throttle: functions_3,
-		isDef: functions_4,
-		isUndef: functions_5
+		isDef: functions_3,
+		isUndef: functions_4
 	});
 
 	var construct_1$1 = ( construct$2 && construct$1 ) || construct$2;
@@ -1220,12 +1201,14 @@ var todomvc = (function (exports) {
 	    var transformMap = getTransformMap(widget, template);
 	    var res = updateDom(widget, template, transformMap, []);
 	    var updateTemplate = function () {
-	        res = updateDom(widget, template, transformMap, res.valueMap);
-	        if (res.change) {
-	            parentNode.dispatchEvent(Update()); // let's inform parent widgets
+	        if (!mutedWidget.has(widget)) {
+	            res = updateDom(widget, template, transformMap, res.valueMap);
+	            if (res.change) {
+	                parentNode.dispatchEvent(Update()); // let's inform parent widgets
+	            }
 	        }
 	    };
-	    el.addEventListener(UPDATE_KEY, function () { return functions_1$1.throttle(updateTemplate, 80); });
+	    el.addEventListener(UPDATE_KEY, updateTemplate);
 	    bindTemplateInfos(template, widget, updateTemplate, transformMap);
 	    template_node_1.injectTemplateNodes(widget, template.nodes);
 	};
@@ -1257,6 +1240,20 @@ var todomvc = (function (exports) {
 	exports.findWidget = function (widget, type) {
 	    return exports.findWidgets(widget, type)[0];
 	};
+	var mutedWidget = new WeakMap();
+	exports.Batch = function () { return function (proto, method) {
+	    construct_1$1.addToConstructorQueue(proto.constructor, function (widget, el) {
+	        var old = widget[method];
+	        Object.defineProperty(widget, method, {
+	            value: function () {
+	                mutedWidget.set(widget, true);
+	                old.apply(widget, arguments);
+	                mutedWidget.delete(widget);
+	                el.dispatchEvent(Update());
+	            }
+	        });
+	    });
+	}; };
 
 	});
 
@@ -1265,6 +1262,7 @@ var todomvc = (function (exports) {
 	var bind_2 = bind.render;
 	var bind_3 = bind.findWidgets;
 	var bind_4 = bind.findWidget;
+	var bind_5 = bind.Batch;
 
 	var bind$2 = /*#__PURE__*/Object.freeze({
 		default: bind$1,
@@ -1272,7 +1270,8 @@ var todomvc = (function (exports) {
 		connectTemplate: bind_1,
 		render: bind_2,
 		findWidgets: bind_3,
-		findWidget: bind_4
+		findWidget: bind_4,
+		Batch: bind_5
 	});
 
 	var event = createCommonjsModule(function (module, exports) {
@@ -1623,7 +1622,8 @@ var todomvc = (function (exports) {
 	        Click('.clear-completed')
 	    ], TodoList.prototype, "clearCompleted", null);
 	    __decorate([
-	        Click('label[for="toggle-all"]')
+	        Click('label[for="toggle-all"]'),
+	        bind_5()
 	    ], TodoList.prototype, "toggleAll", null);
 	    __decorate([
 	        template_14()
@@ -1915,7 +1915,6 @@ var todomvc = (function (exports) {
 	exports.isUndef = functions_1.isUndef;
 	exports.isFunction = functions_1.isFunction;
 	exports.compose = functions_1.compose;
-	exports.throttle = functions_1.throttle;
 	var arrays_1 = arrays_1$1;
 	exports.observeArray = arrays_1.observeArray;
 	exports.range = arrays_1.range;
@@ -1964,6 +1963,7 @@ var todomvc = (function (exports) {
 	exports.findWidget = bind_1.findWidget;
 	exports.findWidgets = bind_1.findWidgets;
 	exports.render = bind_1.render;
+	exports.Batch = bind_1.Batch;
 	var cleanup_1 = cleanup_1$1;
 	exports.registerCleanUp = cleanup_1.registerCleanUp;
 
@@ -1974,44 +1974,44 @@ var todomvc = (function (exports) {
 	var feather_2 = feather.isUndef;
 	var feather_3 = feather.isFunction;
 	var feather_4 = feather.compose;
-	var feather_5 = feather.throttle;
-	var feather_6 = feather.observeArray;
-	var feather_7 = feather.range;
-	var feather_8 = feather.removeFromArray;
-	var feather_9 = feather.ensure;
-	var feather_10 = feather.addPropertyListener;
-	var feather_11 = feather.deepValue;
-	var feather_12 = feather.getSubset;
-	var feather_13 = feather.isObject;
-	var feather_14 = feather.merge;
-	var feather_15 = feather.allChildNodes;
-	var feather_16 = feather.allTextNodes;
-	var feather_17 = feather.Computed;
-	var feather_18 = feather.start;
-	var feather_19 = feather.addToConstructorQueue;
-	var feather_20 = feather.Construct;
-	var feather_21 = feather.On;
-	var feather_22 = feather.Scope;
-	var feather_23 = feather.Delete;
-	var feather_24 = feather.Get;
-	var feather_25 = feather.Post;
-	var feather_26 = feather.Put;
-	var feather_27 = feather.Storable;
-	var feather_28 = feather.LocalStorage;
-	var feather_29 = feather.MediaQuery;
-	var feather_30 = feather.navigate;
-	var feather_31 = feather.runRoutes;
-	var feather_32 = feather.Transformer;
-	var feather_33 = feather.Inject;
-	var feather_34 = feather.Template;
-	var feather_35 = feather.TemplateNode;
-	var feather_36 = feather.findWidget;
-	var feather_37 = feather.findWidgets;
-	var feather_38 = feather.render;
+	var feather_5 = feather.observeArray;
+	var feather_6 = feather.range;
+	var feather_7 = feather.removeFromArray;
+	var feather_8 = feather.ensure;
+	var feather_9 = feather.addPropertyListener;
+	var feather_10 = feather.deepValue;
+	var feather_11 = feather.getSubset;
+	var feather_12 = feather.isObject;
+	var feather_13 = feather.merge;
+	var feather_14 = feather.allChildNodes;
+	var feather_15 = feather.allTextNodes;
+	var feather_16 = feather.Computed;
+	var feather_17 = feather.start;
+	var feather_18 = feather.addToConstructorQueue;
+	var feather_19 = feather.Construct;
+	var feather_20 = feather.On;
+	var feather_21 = feather.Scope;
+	var feather_22 = feather.Delete;
+	var feather_23 = feather.Get;
+	var feather_24 = feather.Post;
+	var feather_25 = feather.Put;
+	var feather_26 = feather.Storable;
+	var feather_27 = feather.LocalStorage;
+	var feather_28 = feather.MediaQuery;
+	var feather_29 = feather.navigate;
+	var feather_30 = feather.runRoutes;
+	var feather_31 = feather.Transformer;
+	var feather_32 = feather.Inject;
+	var feather_33 = feather.Template;
+	var feather_34 = feather.TemplateNode;
+	var feather_35 = feather.findWidget;
+	var feather_36 = feather.findWidgets;
+	var feather_37 = feather.render;
+	var feather_38 = feather.Batch;
 	var feather_39 = feather.registerCleanUp;
 
 	construct_3();
-	feather_31();
+	feather_30();
 
 	return exports;
 
