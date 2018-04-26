@@ -20,7 +20,7 @@
   },
   "scripts": {
     "start": "parcel serve src/html/index.html",
-    "minify": "uglifyjs docs/todomvc.js --source-map content=docs/todomvc.js.map,url=todomvc.min.js.map,includeSources,root=src/typescript -c -m -o docs/todomvc.min.js",
+    "minify": "uglifyjs docs/todomvc.js --source-map content=docs/todomvc.js.map,url=todomvc.min.js.map,includeSources,root=src/typescript -c -o docs/todomvc.min.js",
     "bundle": "rollup -c"
   }
 }
