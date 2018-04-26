@@ -806,7 +806,7 @@ var todomvc = (function (exports) {
 	        listeners.push(listener);
 	    }
 	};
-	function domArrayListener(arr, el, filter, onItemAdded) {
+	function domArrayListener(arr, el, filter, update, onItemAdded) {
 	    var firstChild = el.firstElementChild; // usually null, lists that share a parent with other nodes are prepended.
 	    var nodeVisible = [];
 	    var elementMap = new WeakMap();
@@ -835,6 +835,7 @@ var todomvc = (function (exports) {
 	                    elementMap.delete(del);
 	                    cleanup_1$1.cleanUp(node);
 	                }
+	                update();
 	            }
 	            if (added.length) {
 	                for (var _a = 0, added_1 = added; _a < added_1.length; _a++) {
@@ -843,6 +844,7 @@ var todomvc = (function (exports) {
 	                        elementMap.set(item, onItemAdded(item));
 	                    }
 	                }
+	                update();
 	            }
 	            patch.splice.apply(patch, [index, deleteCount].concat(added.map(function () { return true; })));
 	            for (var i = 0, n = arr.length; i < n; i++) {
@@ -1102,9 +1104,9 @@ var todomvc = (function (exports) {
 	    }
 	    return map;
 	};
-	var bindArray = function (array, parentNode, widget, info, templateName) {
+	var bindArray = function (array, parentNode, widget, info, templateName, update) {
 	    var method = info.arrayTransformer(), transformer = (widget[method] || transformer_1$1.TransformerRegistry[method]).bind(widget);
-	    var listener = arrays_1$1.domArrayListener(array, parentNode, transformer(), function (item) {
+	    var listener = arrays_1$1.domArrayListener(array, parentNode, transformer(), update, function (item) {
 	        var template = template_1$1.getTemplate(item, templateName()), node = template.nodes[1];
 	        construct_1$1.runConstructorQueue(item, node);
 	        exports.connectTemplate(item, node, template, parentNode);
@@ -1171,7 +1173,7 @@ var todomvc = (function (exports) {
 	                else {
 	                    templateName = function () { return attributeValue_1; };
 	                }
-	                bindArray(value, node, widget, info, templateName);
+	                bindArray(value, node, widget, info, templateName, updateTemplate);
 	                node.removeAttribute('template');
 	            }
 	        }

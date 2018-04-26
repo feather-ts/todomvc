@@ -1,12 +1,12 @@
 import {Construct, Widget} from '@feather-ts/feather-ts/dist/decorators/construct'
 import {ListState} from './config'
-import {LocalStorage} from '@feather-ts/feather-ts/dist/decorators/local-storage'
 import {Todo} from './todo'
 import {render, Batch} from '@feather-ts/feather-ts/dist/core/bind'
 import {removeFromArray} from '@feather-ts/feather-ts/dist/utils/arrays'
 import {Route} from '@feather-ts/feather-ts/dist/decorators/router'
 import {On} from '@feather-ts/feather-ts/dist/decorators/event'
 import {Template} from '@feather-ts/feather-ts/dist/decorators/template'
+import {LocalStorage} from '@feather-ts/feather-ts/dist/decorators/local-storage';
 
 export interface RouteParam {
     path: string;
