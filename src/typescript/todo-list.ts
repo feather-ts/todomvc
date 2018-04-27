@@ -22,7 +22,9 @@ export class TodoList implements Widget {
     @LocalStorage(() => Todo)
     todos: Todo[] = []
 
-    init = (el: HTMLElement) => render(this, el)
+    init = (el: HTMLElement) => {
+        render(this, el)
+    }
 
     newTodo(todo: Todo) {
         this.todos.push(todo)
@@ -34,8 +36,8 @@ export class TodoList implements Widget {
 
     listFilter = () =>
         (todo: Todo) => this.state === ListState.ALL ||
-        (this.state === ListState.COMPLETED && todo.completed) ||
-        (this.state === ListState.ACTIVE && !todo.completed)
+            (this.state === ListState.COMPLETED && todo.completed) ||
+            (this.state === ListState.ACTIVE && !todo.completed)
 
     @Route('/:path')
     locationPath(params: RouteParam) {

@@ -807,7 +807,6 @@ var todomvc = (function (exports) {
 	    }
 	};
 	function domArrayListener(arr, el, filter, update, onItemAdded) {
-	    var firstChild = el.firstElementChild; // usually null, lists that share a parent with other nodes are prepended.
 	    var nodeVisible = [];
 	    var elementMap = new WeakMap();
 	    var listener = {
@@ -823,35 +822,35 @@ var todomvc = (function (exports) {
 	        },
 	        splice: function (index, deleteCount, added, deleted) {
 	            if (deleted === void 0) { deleted = []; }
-	            var patch = Array.from(nodeVisible);
-	            nodeVisible.splice.apply(nodeVisible, [index, deleteCount].concat(added.map(function () { return false; })));
+	            var patch = Array.from(nodeVisible), patchHelper = [index, deleteCount].concat(added.map(function () { return false; }));
+	            nodeVisible.splice.apply(nodeVisible, patchHelper);
 	            if (deleteCount) {
-	                for (var _i = 0, deleted_1 = deleted; _i < deleted_1.length; _i++) {
-	                    var del = deleted_1[_i];
+	                for (var del = void 0, d = 0; d < deleteCount; d++) {
+	                    del = deleted[d];
 	                    var node = elementMap.get(del);
-	                    if (node.parentElement === el) {
+	                    if (node && node.parentElement === el) {
 	                        el.removeChild(node);
+	                        cleanup_1$1.cleanUp(node);
+	                        elementMap.delete(del);
 	                    }
-	                    elementMap.delete(del);
-	                    cleanup_1$1.cleanUp(node);
 	                }
 	                update();
 	            }
 	            if (added.length) {
-	                for (var _a = 0, added_1 = added; _a < added_1.length; _a++) {
-	                    var item = added_1[_a];
+	                for (var item = void 0, a = 0, n = added.length; a < n; a++) {
+	                    item = added[a];
 	                    if (!elementMap.has(item)) {
 	                        elementMap.set(item, onItemAdded(item));
 	                    }
 	                }
 	                update();
 	            }
-	            patch.splice.apply(patch, [index, deleteCount].concat(added.map(function () { return true; })));
+	            patch.splice.apply(patch, patchHelper);
 	            for (var i = 0, n = arr.length; i < n; i++) {
 	                patch[i] = filter(arr[i], i);
 	                var itemNode = elementMap.get(arr[i]);
 	                if (patch[i] && !nodeVisible[i]) {
-	                    var nextVisible = nodeVisible.indexOf(true, i), refNode = ~nextVisible ? elementMap.get(arr[nextVisible]) : firstChild;
+	                    var nextVisible = nodeVisible.indexOf(true, i), refNode = ~nextVisible ? elementMap.get(arr[nextVisible]) : undefined;
 	                    el.insertBefore(itemNode, refNode);
 	                }
 	                else if (!patch[i] && nodeVisible[i] && itemNode.parentNode === el) {
@@ -996,12 +995,12 @@ var todomvc = (function (exports) {
 	        node.textContent = functions_1$1.isDef(value) ? value : '';
 	    }
 	    else if (info.type === template_1$1.TemplateTokenType.CLASS) {
-	        !!oldValue && node.classList.remove(("" + oldValue).replace(/\s+/g, '-')) ||
-	            !!value && node.classList.add(("" + value).replace(/\s+/g, '-'));
+	        !!oldValue && node.classList.remove(("" + oldValue).replace(/\s+/g, '-'));
+	        !!value && node.classList.add(("" + value).replace(/\s+/g, '-'));
 	    }
 	    else if (info.type === template_1$1.TemplateTokenType.ATTRIBUTE || info.type === template_1$1.TemplateTokenType.PROPERTY) {
 	        var attributeName = info.attribute || info.path();
-	        if (/checked|value/i.test(attributeName)) {
+	        if (/checked|value|selectedIndex/i.test(attributeName)) {
 	            node[attributeName] = value;
 	        }
 	        else if (functions_1$1.isUndef(value) || value === false) {
@@ -1017,16 +1016,20 @@ var todomvc = (function (exports) {
 	var updateDom = function (widget, template, transformMap, oldValueMap) {
 	    var domChanged = false;
 	    var valueMap = getCurrentValueMap(widget, template, transformMap);
-	    for (var i = 0, n = template.infos.length; i < n; i++) {
-	        var info = template.infos[i];
+	    for (var info = void 0, i = 0, n = template.infos.length; i < n; i++) {
+	        info = template.infos[i];
 	        if (info.type === template_1$1.TemplateTokenType.TAG) {
 	            continue;
 	        }
-	        var oldValue = oldValueMap[i], value = valueMap[i];
-	        if (value === ARRAY_TAG) { // ignore arrays
+	        var value = valueMap[i];
+	        if (info.type === template_1$1.TemplateTokenType.PROPERTY && Array.isArray(value)) { // ignore array bindings
+	            continue;
+	        }
+	        if (value === ARRAY_TAG) { // filter other arrays
 	            widget[info.path()].splice(0, 0);
 	            continue;
 	        }
+	        var oldValue = oldValueMap[i];
 	        if (oldValue !== value) {
 	            domChanged = true;
 	            oldValueMap[i] = updateDomValue(template.nodes[info.position], info, value, oldValue);
@@ -1210,7 +1213,7 @@ var todomvc = (function (exports) {
 	            }
 	        }
 	    };
-	    el.addEventListener(UPDATE_KEY, updateTemplate);
+	    el.addEventListener(UPDATE_KEY, updateTemplate, { passive: true, capture: false });
 	    bindTemplateInfos(template, widget, updateTemplate, transformMap);
 	    template_node_1.injectTemplateNodes(widget, template.nodes);
 	};
@@ -1225,13 +1228,11 @@ var todomvc = (function (exports) {
 	};
 	exports.render = function (widget, el, name) {
 	    var children = dom_1$1.allChildNodes(el);
-	    for (var node = void 0, i = 0, n = children.length; i < n; i++) {
+	    for (var node = void 0, i = 1, n = children.length; i < n; i++) { // first element is 'el' itself
 	        node = children[i];
-	        if (node !== el) {
-	            cleanup_1$1.cleanUp(node);
-	        }
+	        cleanup_1$1.cleanUp(node);
+	        el.removeChild(node);
 	    }
-	    el.innerHTML = '';
 	    var template = template_1$1.getTemplate(widget, name);
 	    exports.connectTemplate(widget, el, template);
 	    el.appendChild(template.doc);
@@ -1355,7 +1356,6 @@ var todomvc = (function (exports) {
 
 
 
-	var localStorageProperties = new WeakMap();
 	var storableProperties = new WeakMap();
 	var widgetId = function (widget) {
 	    var id = widget.id || widget.name || widget.title || widget.constructor.name;
@@ -1383,13 +1383,19 @@ var todomvc = (function (exports) {
 	        }, new (Function.prototype.bind.apply(proto)));
 	    });
 	};
+	var storeQueue = new WeakMap();
 	var storeArray = function (key, arr, proto) {
-	    var props = storableProperties.get(proto);
-	    if (functions_1$1.isUndef(props)) {
-	        throw Error('@LocalStorage array items must have at least one @Storable() property');
+	    if (storeQueue.has(arr)) {
+	        clearTimeout(storeQueue.get(arr));
 	    }
-	    var value = arr.map(function (i) { return objects_1$1.getSubset(props, i); });
-	    setTimeout(function () { return store(key, value); }, 80);
+	    storeQueue.set(arr, setTimeout(function () {
+	        var props = storableProperties.get(proto);
+	        if (functions_1$1.isUndef(props)) {
+	            throw Error('@LocalStorage array items must have at least one @Storable() property');
+	        }
+	        var value = arr.map(function (i) { return objects_1$1.getSubset(props, i); });
+	        store(key, value);
+	    }, 80));
 	};
 	var storeListener = function (arr, callback) {
 	    var listener = {
@@ -1411,51 +1417,44 @@ var todomvc = (function (exports) {
 	    arrays_1$1.observeArray(arr, listener);
 	    listener.splice(0, 0, arr);
 	};
-	var handler = function (arrayType) { return function (widget) {
-	    var props = localStorageProperties.get(Object.getPrototypeOf(widget));
-	    if (props) {
-	        props.forEach(function (prop) {
-	            var storeKey = widgetId(widget) + '.' + prop;
-	            var value = widget[prop];
-	            if (Array.isArray(value)) {
-	                var type_1 = functions_1$1.isDef(arrayType) ? arrayType() : undefined;
-	                if (functions_1$1.isUndef(type_1)) {
-	                    throw Error('Stored arrays need an arrayType argument');
-	                }
-	                try {
-	                    var tryValue = loadArray(storeKey, type_1);
-	                    if (functions_1$1.isDef(tryValue)) {
-	                        value = widget[prop] = tryValue;
-	                    }
-	                }
-	                catch (e) {
-	                    console.warn('LocalStorage loading failed...ignoring');
-	                    // format changed or something else failed
-	                }
-	                storeListener(value, function () {
-	                    storeArray(storeKey, value, type_1);
-	                });
+	var handler = function (prop, arrayType) { return function (widget) {
+	    var storeKey = widgetId(widget) + '.' + prop;
+	    var value = widget[prop];
+	    if (Array.isArray(value)) {
+	        var type_1 = functions_1$1.isDef(arrayType) ? arrayType() : undefined;
+	        if (functions_1$1.isUndef(type_1)) {
+	            throw Error("Stored array '" + prop + "' needs an arrayType factory argument");
+	        }
+	        try {
+	            var tryValue = loadArray(storeKey, type_1);
+	            if (functions_1$1.isDef(tryValue)) {
+	                value = widget[prop] = tryValue;
 	            }
-	            else {
-	                var tryValue = load(storeKey);
-	                if (functions_1$1.isDef(tryValue)) {
-	                    widget[prop] = tryValue;
-	                }
-	                objects_1$1.addPropertyListener(widget, prop, function () {
-	                    store(storeKey, widget[prop]);
-	                });
-	            }
+	        }
+	        catch (e) {
+	            console.warn('LocalStorage loading failed...ignoring');
+	            // format changed or something else failed
+	        }
+	        storeListener(value, function () {
+	            storeArray(storeKey, value, type_1);
+	        });
+	    }
+	    else {
+	        var tryValue = load(storeKey);
+	        if (functions_1$1.isDef(tryValue)) {
+	            widget[prop] = tryValue;
+	        }
+	        objects_1$1.addPropertyListener(widget, prop, function () {
+	            store(storeKey, widget[prop]);
 	        });
 	    }
 	}; };
 	exports.LocalStorage = function (arrayType) { return function (proto, property) {
-	    objects_1$1.ensure(localStorageProperties, proto, [property]);
-	    construct_1$1.addToConstructorQueue(proto.constructor, handler(arrayType));
+	    construct_1$1.addToConstructorQueue(proto.constructor, handler(property, arrayType));
 	}; };
 	exports.Storable = function () { return function (proto, property) {
 	    objects_1$1.ensure(storableProperties, proto.constructor, [property]);
 	}; };
-	// todo: write test somehow
 
 	});
 
@@ -1567,7 +1566,9 @@ var todomvc = (function (exports) {
 	        var _this = this;
 	        this.state = ListState.ALL;
 	        this.todos = [];
-	        this.init = function (el) { return bind_2(_this, el); };
+	        this.init = function (el) {
+	            bind_2(_this, el);
+	        };
 	        this.listFilter = function () {
 	            return function (todo) { return _this.state === ListState.ALL ||
 	                (_this.state === ListState.COMPLETED && todo.completed) ||
@@ -1857,7 +1858,7 @@ var todomvc = (function (exports) {
 	    construct_1$1.addToConstructorQueue(proto.constructor, function (widget, node) {
 	        var handler = function (mq) {
 	            if (mq.matches) {
-	                proto[method].call(widget, node);
+	                widget[method].call(widget, node);
 	            }
 	            return handler;
 	        };
@@ -1866,7 +1867,6 @@ var todomvc = (function (exports) {
 	        cleanup_1$1.registerCleanUp(node, function () { return mediaQueryList.removeListener(handler); });
 	    });
 	}; };
-	// todo: write test somehow
 
 	});
 
