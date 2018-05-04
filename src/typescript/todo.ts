@@ -32,7 +32,7 @@ export class Todo implements ArrayWidget {
     }
 
     @On({event: 'dblclick', selector: 'label'})
-    startEditing(ev, label: Element) {
+    startEditing() {
         this.edit.value = this.name
         this.editing = true
         this.edit.focus()

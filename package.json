@@ -3,8 +3,8 @@
   "main": "./lib/feather.min.js",
   "types": "./lib/feather.d.ts",
   "dependencies": {
-    "@feather-ts/feather-ts": "^2.0.70",
-    "todomvc-app-css": "2.1.0",
+    "@feather-ts/feather-ts": "2.0.79",
+    "todomvc-app-css": "2.1.1",
     "todomvc-common": "1.0.3",
     "uglify-js": "3.3.22"
   },
@@ -16,11 +16,13 @@
     "stylelint": "9.2.0",
     "ts-node": "3.3.0",
     "tslint": "5.7.0",
-    "typescript": "2.5.2"
+    "typescript": "2.5.2",
+    "npm-run-all": "4.1.2"
   },
   "scripts": {
     "start": "parcel serve src/html/index.html",
     "minify": "uglifyjs docs/todomvc.js --source-map content=docs/todomvc.js.map,url=todomvc.min.js.map,includeSources,root=src/typescript -c -o docs/todomvc.min.js",
-    "bundle": "rollup -c"
+    "rollup": "rollup -c",
+    "bundle": "npm-run-all rollup minify"
   }
 }

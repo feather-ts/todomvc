@@ -1652,7 +1652,7 @@ var todomvc = (function (exports) {
 	    Todo.prototype.deleteSelf = function () {
 	        this.todoList.deleteTodo(this);
 	    };
-	    Todo.prototype.startEditing = function (ev, label) {
+	    Todo.prototype.startEditing = function () {
 	        this.edit.value = this.name;
 	        this.editing = true;
 	        this.edit.focus();
