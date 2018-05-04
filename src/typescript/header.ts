@@ -1,18 +1,13 @@
-import {Construct, Widget} from '@feather-ts/feather-ts/dist/decorators/construct'
-import {Inject} from '@feather-ts/feather-ts/dist/decorators/inject'
-import {render} from '@feather-ts/feather-ts/dist/core/bind'
-import {Template} from '@feather-ts/feather-ts/dist/decorators/template'
-import {On, Scope} from '@feather-ts/feather-ts/dist/decorators/event'
+import {Construct, Inject, On, render, Scope, Template, TemplateNode, Widget} from '@feather-ts/feather-ts'
 import {TodoList} from './todo-list'
 import {ENTER} from './config'
 import {Todo} from './todo'
-import {TemplateNode} from '@feather-ts/feather-ts/dist/decorators/template-node'
 
 @Construct({selector: '.header'})
 class Header implements Widget {
 
     @Inject() todoList: TodoList
-    @TemplateNode('input') edit: HTMLInputElement
+    @TemplateNode('.new-todo') edit: HTMLInputElement
 
     init(element: Element): void {
         render(this, element)

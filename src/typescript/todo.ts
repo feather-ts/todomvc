@@ -1,9 +1,4 @@
-import {ArrayWidget} from '@feather-ts/feather-ts/dist/decorators/construct'
-import {TemplateNode} from '@feather-ts/feather-ts/dist/decorators/template-node'
-import {Storable} from '@feather-ts/feather-ts/dist/decorators/local-storage'
-import {On, Scope} from '@feather-ts/feather-ts/dist/decorators/event'
-import {Template} from '@feather-ts/feather-ts/dist/decorators/template'
-import {Inject} from '@feather-ts/feather-ts/dist/decorators/inject'
+import {ArrayWidget, Inject, On, Scope, Storable, Template, TemplateNode} from '@feather-ts/feather-ts'
 import {Click, TodoList} from './todo-list'
 import {ENTER, ESC} from './config'
 
