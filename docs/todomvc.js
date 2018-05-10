@@ -2,7 +2,7 @@
 var todomvc = (function (exports) {
     'use strict';
 
-    /* feather-ts v2.0.87 */
+    /* feather-ts v2.0.93 */
     var getType = {}.toString;
     var compose = function (fns) { return function (res) {
         if (fns.length === 1) {
@@ -172,6 +172,78 @@ var todomvc = (function (exports) {
             }
         }
     }, 80); };
+    function namedRegexMatch(text, regex, matchNames) {
+        var matches = regex.exec(text);
+        if (!matches) {
+            return;
+        }
+        return matches.reduce(function (result, match, index) {
+            if (index > 0) {
+                result[matchNames[index - 1]] = match;
+            }
+            return result;
+        }, {});
+    }
+    var decapitalize = function (str) { return str.charAt(0).toLowerCase() + str.substr(1); };
+    var camelCaseFromHyphens = function (str) {
+        return str.replace(/\b-([a-z])/g, function (all, char) { return char.toUpperCase(); });
+    };
+    var ConstructRegistry = {};
+    var Singletons = {};
+    var start = function (root) {
+        if (root === void 0) { root = document.documentElement; }
+        var createdWidgets = [];
+        Object.keys(ConstructRegistry).forEach(function (selector) {
+            Array.from(root.querySelectorAll(selector)).forEach(function (node) {
+                var widget = new (Function.prototype.bind.apply(ConstructRegistry[selector]));
+                runConstructorQueue(widget, node);
+                createdWidgets.push(widget);
+                runAfterDomMount(node);
+            });
+        });
+        return createdWidgets;
+    };
+    var Construct = function (conf) { return function (proto) {
+        ConstructRegistry[conf.selector] = proto;
+        addToConstructorQueue(proto, function (widget, node) {
+            if (conf.singleton === true) {
+                var name_1 = decapitalize(widget.constructor.name);
+                Singletons[name_1] = widget;
+                registerCleanUp(node, function () {
+                    delete Singletons[name_1];
+                });
+            }
+            widget.init(node);
+        });
+    }; };
+    var queue = new WeakMap();
+    var addToConstructorQueue = function (constructor, func) {
+        ensure(queue, constructor, [func]);
+    };
+    var afterRenderQueue = [];
+    var addToAfterMount = function (constructor, func) {
+        addToConstructorQueue(constructor, function (widget, node) {
+            var callback = {
+                node: node,
+                function: function () { return func(widget, node); }
+            };
+            afterRenderQueue.push(callback);
+            registerCleanUp(node, function () { return removeFromArray(afterRenderQueue, [callback]); });
+        });
+    };
+    var runAfterDomMount = function (root) {
+        afterRenderQueue.forEach(function (cb) {
+            if (root.contains(cb.node)) {
+                cb.function();
+            }
+        });
+    };
+    var runConstructorQueue = function (widget, node) {
+        var widgetQueue = queue.get(Object.getPrototypeOf(widget).constructor) || [];
+        for (var i = 0, n = widgetQueue.length; i < n; i++) { // for performance
+            widgetQueue[i].call(widget, widget, node);
+        }
+    };
 
     var observers = new WeakMap();
     function removeFromArray(arr, elements) {
@@ -226,10 +298,10 @@ var todomvc = (function (exports) {
             return res;
         };
     }
-    var range = function (start, end) {
-        var len = end - start + 1, arr = new Array(len);
+    var range = function (start$$1, end) {
+        var len = end - start$$1 + 1, arr = new Array(len);
         for (var i = 0, l = arr.length; i < l; i++) {
-            arr[i] = i + start;
+            arr[i] = i + start$$1;
         }
         return arr;
     };
@@ -323,6 +395,7 @@ var todomvc = (function (exports) {
                     if (patch[i] && !nodeVisible[i]) {
                         var nextVisible = nodeVisible.indexOf(true, i), refNode = ~nextVisible ? elementMap.get(arr[nextVisible]) : undefined;
                         el.insertBefore(itemNode, refNode);
+                        runAfterDomMount(el);
                     }
                     else if (!patch[i] && nodeVisible[i] && itemNode.parentNode === el) {
                         el.removeChild(itemNode);
@@ -332,7 +405,12 @@ var todomvc = (function (exports) {
             }
         };
         listener.splice(0, 0, arr, []);
-        registerCleanUp(el, function () { return observers.delete(arr); });
+        registerCleanUp(el, function () {
+            if (observers.has(arr)) {
+                removeFromArray(observers.get(arr), [listener]);
+            }
+        });
+        observeArray(arr, listener);
         return listener;
     }
 
@@ -345,70 +423,6 @@ var todomvc = (function (exports) {
         computedProps.get(proto)[info.path()].forEach(function (prop) {
             return createObjectPropertyListener(widget, prop, function () { return updateDom(); });
         });
-    };
-    function namedRegexMatch(text, regex, matchNames) {
-        var matches = regex.exec(text);
-        if (!matches) {
-            return;
-        }
-        return matches.reduce(function (result, match, index) {
-            if (index > 0) {
-                result[matchNames[index - 1]] = match;
-            }
-            return result;
-        }, {});
-    }
-    var decapitalize = function (str) { return str.charAt(0).toLowerCase() + str.substr(1); };
-    var camelCaseFromHyphens = function (str) {
-        return str.replace(/\b-([a-z])/g, function (all, char) { return char.toUpperCase(); });
-    };
-
-    var ConstructRegistry = {};
-    var Singletons = {};
-    var start = function (root) {
-        if (root === void 0) { root = document.documentElement; }
-        var createdWidgets = [];
-        Object.keys(ConstructRegistry).forEach(function (selector) {
-            Array.from(root.querySelectorAll(selector)).forEach(function (node) {
-                var widget = new (Function.prototype.bind.apply(ConstructRegistry[selector]));
-                runConstructorQueue(widget, node);
-                createdWidgets.push(widget);
-            });
-        });
-        return createdWidgets;
-    };
-    var Construct = function (conf) { return function (proto) {
-        ConstructRegistry[conf.selector] = proto;
-        addToConstructorQueue(proto, function (widget, node) {
-            if (conf.singleton === true) {
-                var name_1 = decapitalize(widget.constructor.name);
-                Singletons[name_1] = widget;
-                registerCleanUp(node, function () {
-                    delete Singletons[name_1];
-                });
-            }
-            widget.init(node);
-        });
-    }; };
-    var queue = new WeakMap();
-    var renderQueue = new WeakMap();
-    var addToConstructorQueue = function (constructor, func) {
-        ensure(queue, constructor, [func]);
-    };
-    var addToRenderQueue = function (constructor, func) {
-        ensure(renderQueue, constructor, [func]);
-    };
-    var runConstructorQueue = function (widget, node) {
-        var widgetQueue = queue.get(Object.getPrototypeOf(widget).constructor) || [];
-        for (var i = 0, n = widgetQueue.length; i < n; i++) { // for performance
-            widgetQueue[i].call(widget, widget, node);
-        }
-    };
-    var runAfterRenderQueue = function (widget, node) {
-        var widgetQueue = renderQueue.get(Object.getPrototypeOf(widget).constructor) || [];
-        for (var i = 0, n = widgetQueue.length; i < n; i++) { // for performance use for-loops
-            widgetQueue[i].call(widget, widget, node);
-        }
     };
 
     var Scope;
@@ -827,7 +841,7 @@ var todomvc = (function (exports) {
     }; };
 
     var TemplateNode = function (selector) { return function (proto, property) {
-        addToRenderQueue(proto.constructor, function (widget, node) {
+        addToAfterMount(proto.constructor, function (widget, node) {
             if (isUndef(widget[property])) {
                 widget[property] = node.querySelector(selector);
             }
@@ -969,15 +983,13 @@ var todomvc = (function (exports) {
     };
     var bindArray = function (array, parentNode, widget, info, templateName, update) {
         var transformer = info.arrayTransformer() ? transformFactory(widget, info.transformers())() : undefined;
-        var listener = domArrayListener(array, parentNode, update, function (item) {
+        return domArrayListener(array, parentNode, update, function (item) {
             injectArray(item, array);
             var template = getTemplate(item, templateName()), node = template.nodes[1];
             runConstructorQueue(item, node);
             connectTemplate(item, node, template, parentNode);
             return node;
         }, transformer);
-        observeArray(array, listener);
-        return listener;
     };
     var getTransformMap = function (widget, template) {
         var map = {};
@@ -1100,7 +1112,6 @@ var todomvc = (function (exports) {
         var template = getTemplate(widget, name);
         connectTemplate(widget, el, template);
         el.appendChild(template.doc);
-        runAfterRenderQueue(widget, el);
     };
     var mutedWidget = new WeakMap();
     var Batch = function () { return function (proto, method) {
